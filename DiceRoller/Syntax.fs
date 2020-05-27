@@ -2,27 +2,31 @@
 
 open System.Text.RegularExpressions
 
-// <expression> ::= <term> | <term> <operator> <term>
-// <term>       ::= <die-roll> | <integer> | <lparen> <expression> <rparen> | <term> <operator> <term>
-// <operator>   ::= + | - | *
-// <die-roll>   ::= d <integer> | <integer> d <integer>
+// <expression> ::= <term> | <term> [<addop> <term>]*
+// <term>       ::= <factor> [<mulop> factor]*
+// <factor>     ::= <dice-roll> | <integer> | (expression)
+// <addop>      ::= + | -
+// <mulop>      ::= *
+// <dice-roll>  ::= d <integer> | <integer> d <integer>
 // <integer>    ::= <digit> | <integer> <digit>
 // <digit>      ::= 0|1|2|3|4|5|6|7|8|9
-// <lparen>     ::= (
-// <rparen>     ::= )
 
 type Operator = Plus | Minus | Multiply
 
-type DieRoll =
+type DiceRoll =
     {
         Quantity : int
         Sides : int
     }
 
+type Factor =
+    | DiceRoll of DiceRoll
+    | Value of int
+    | AddOp of LFactor:Factor * Operator:Operator * RFactor:Factor
+
 type Term =
-    | DieRoll of DieRoll
-    | Literal of int
-    | Expression of LTerm : Term * Operator : Operator * RTerm : Term
+    | Factor of Factor
+    | MulOp of LTerm:Term * Operator:Operator * RTerm:Term
 
 let private integerRegex = Regex(@"\d+")
 
@@ -64,15 +68,31 @@ let (|Dice|_|) (s : string) =
         | _ -> None
     | _ -> None
 
-let (|Op|_|) (s : string) =
+let (|AddOp|_|) (s : string) =
     let s = triml s
     if s.Length > 0 then
         let c = s.[0]
-        let r = after s 1
+        let rest = after s 1
         match c with
-        | '+' -> Some (Plus,r)
-        | '-' -> Some (Minus,r)
-        | '*' -> Some (Multiply,r)
+        | '+' -> Some (Plus,rest)
+        | '-' -> Some (Minus,rest)
         | _ -> None
     else
         None
+
+let (|MulOp|_|) (s : string) =
+    let s = triml s
+    if s.Length > 0 then
+        let c = s.[0]
+        let rest = after s 1
+        match c with
+        | '*' -> Some (Multiply,rest)
+        | _ -> None
+    else
+        None
+
+let (|Factor|_|) (s : string) =
+    match s with
+    | Dice (diceRoll,rest) -> Some (DiceRoll diceRoll,rest)
+    | Int (i,rest) -> Some (Value i,rest)
+    | _ -> None
