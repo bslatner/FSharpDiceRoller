@@ -244,4 +244,54 @@ let tests =
             opTest " 23 + 78 " (addOp 23 Plus 78)
             opTest "987   -    321" (addOp 987 Minus 321)
 
+        testCase "Term matches dice rolls" <| fun _ ->
+            let opTest s expected =
+                match s with
+                | Term (t,_) -> 
+                    match t with
+                    | Term.Factor f ->
+                        match f with
+                        | DiceRoll diceRoll -> Expect.equal diceRoll expected ""
+                        | _ -> failwithf "'%s' did not match %A" s expected
+                    | _ -> failwithf "'%s' did not match %A" s expected
+                | _ -> failwithf "'%s' did not match %A" s expected
+
+
+            opTest "d4" { Quantity = 1; Sides = 4 }
+            opTest " d 4 " { Quantity = 1; Sides = 4 }
+            opTest "2d6" { Quantity = 2; Sides = 6 }
+            opTest "2 d6" { Quantity = 2; Sides = 6 }
+
+        testCase "Term matches integer literals" <| fun _ ->
+            let opTest s expected =
+                match s with
+                | Term (t,_) ->
+                    match t with
+                    | Term.Factor f -> 
+                        match f with
+                        | Value v -> Expect.equal v expected ""
+                        | _ -> failwithf "'%s' did not match Value %i" s expected
+                    | _ -> failwithf "'%s' did not match Value %i" s expected
+                | _ -> failwithf "'%s' did not match Value %i" s expected
+
+            opTest "1" 1
+            opTest " 1" 1
+            opTest "23" 23
+            opTest "23  " 23
+
+        testCase "Term matches multiplication expressions" <| fun _ ->
+            let mulOp l op r = MulOp (Value l,op,Value r)
+
+            let opTest s expected =
+                match s with
+                | Term (t,_) ->
+                    match t with
+                    | Term.MulOp (l,op,r) -> Expect.equal (MulOp (l,op,r)) expected ""
+                    | _ -> failwithf "'%s' did not match %A" s expected
+                | _ -> failwithf "'%s' did not match %A" s expected
+
+            opTest "1*2" (mulOp 1 Multiply 2)
+            opTest " 23 * 78 " (mulOp 23 Multiply 78)
+            opTest "987   *    321" (mulOp 987 Multiply 321)
+
     ]
