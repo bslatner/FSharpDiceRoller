@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30114.105
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "DiceRoller", "DiceRoller\DiceRoller.fsproj", "{BCC4A420-F581-49DD-B4DF-80DBF9C5D911}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "DiceRoller.Test", "DiceRoller.Test\DiceRoller.Test.fsproj", "{595E8F8A-CEF9-46DE-8BD1-E56F6BDD038A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BCC4A420-F581-49DD-B4DF-80DBF9C5D911}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BCC4A420-F581-49DD-B4DF-80DBF9C5D911}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BCC4A420-F581-49DD-B4DF-80DBF9C5D911}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BCC4A420-F581-49DD-B4DF-80DBF9C5D911}.Release|Any CPU.Build.0 = Release|Any CPU
+		{595E8F8A-CEF9-46DE-8BD1-E56F6BDD038A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{595E8F8A-CEF9-46DE-8BD1-E56F6BDD038A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{595E8F8A-CEF9-46DE-8BD1-E56F6BDD038A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{595E8F8A-CEF9-46DE-8BD1-E56F6BDD038A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {83BEE025-7FCE-48F6-8725-A4142B958E53}
+	EndGlobalSection
+EndGlobal
