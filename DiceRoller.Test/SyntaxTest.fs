@@ -145,28 +145,28 @@ let tests =
                 | Dice (value, _) -> Expect.equal value expected ""
                 | _ -> failwithf "%s did not parse to %A" s expected
 
-        testCase "AddOp matches operators" <| fun _ ->
+        testCase "AddExp matches operators" <| fun _ ->
             let opTest s expected =
                 match s with
-                | AddOp (value, _) -> Expect.equal value expected ""
+                | AddExp (value, _) -> Expect.equal value expected ""
                 | _ -> failwithf "'%s' did not parse to %A" s expected
 
             opTest "+" Plus
             opTest "-" Minus
 
-        testCase "AddOp matches operators with leading whitespace" <| fun _ ->
+        testCase "AddExp matches operators with leading whitespace" <| fun _ ->
             let opTest s expected =
                 match s with
-                | AddOp (value, _) -> Expect.equal value expected ""
+                | AddExp (value, _) -> Expect.equal value expected ""
                 | _ -> failwithf "'%s' did not parse to %A" s expected
 
             opTest " +" Plus
             opTest "  -" Minus
 
-        testCase "AddOp returns rest of string for operator" <| fun _ ->
+        testCase "AddExp returns rest of string for operator" <| fun _ ->
             let opTest s expected rest =
                 match s with
-                | AddOp (value, r) -> 
+                | AddExp (value, r) -> 
                     Expect.equal value expected ""
                     Expect.equal r rest ""
                 | _ -> failwithf "'%s' did not parse to %A" s expected
@@ -174,30 +174,74 @@ let tests =
             opTest " +abc" Plus "abc"
             opTest "  - hello,world" Minus " hello,world"
 
-        testCase "MulOp matches operators" <| fun _ ->
+        testCase "MulExp matches operators" <| fun _ ->
             let opTest s expected =
                 match s with
-                | MulOp (value, _) -> Expect.equal value expected ""
+                | MulExp (value, _) -> Expect.equal value expected ""
                 | _ -> failwithf "'%s' did not parse to %A" s expected
 
             opTest "*" Multiply
 
-        testCase "MulOp matches operators with leading whitespace" <| fun _ ->
+        testCase "MulExp matches operators with leading whitespace" <| fun _ ->
             let opTest s expected =
                 match s with
-                | MulOp (value, _) -> Expect.equal value expected ""
+                | MulExp (value, _) -> Expect.equal value expected ""
                 | _ -> failwithf "'%s' did not parse to %A" s expected
 
             opTest "   *" Multiply
 
-        testCase "MulOp returns rest of string for operator" <| fun _ ->
+        testCase "MulExp returns rest of string for operator" <| fun _ ->
             let opTest s expected rest =
                 match s with
-                | MulOp (value, r) -> 
+                | MulExp (value, r) -> 
                     Expect.equal value expected ""
                     Expect.equal r rest ""
                 | _ -> failwithf "'%s' did not parse to %A" s expected
 
             opTest "   *     woot!" Multiply "     woot!"
+
+        testCase "Factor matches dice rolls" <| fun _ ->
+            let opTest s expected =
+                match s with
+                | Factor (f,_) -> 
+                    match f with
+                    | DiceRoll diceRoll -> Expect.equal diceRoll expected ""
+                    | _ -> failwithf "'%s' did not match %A" s expected
+                | _ -> failwithf "'%s' did not match %A" s expected
+
+            opTest "d4" { Quantity = 1; Sides = 4 }
+            opTest " d 4 " { Quantity = 1; Sides = 4 }
+            opTest "2d6" { Quantity = 2; Sides = 6 }
+            opTest "2 d6" { Quantity = 2; Sides = 6 }
+
+        testCase "Factor matches integer literals" <| fun _ ->
+            let opTest s expected =
+                match s with
+                | Factor (f,_) -> 
+                    match f with
+                    | Value v -> Expect.equal v expected ""
+                    | _ -> failwithf "'%s' did not match Value %i" s expected
+                | _ -> failwithf "'%s' did not match Value %i" s expected
+
+            opTest "1" 1
+            opTest " 1" 1
+            opTest "23" 23
+            opTest "23  " 23
+
+        testCase "Factor matches add and subtract expressions" <| fun _ ->
+            let addOp l op r = AddOp (Value l,op,Value r)
+
+            let opTest s expected =
+                match s with
+                | Factor (f,_) -> 
+                    match f with
+                    | AddOp (l,op,r) -> Expect.equal (AddOp (l,op,r)) expected ""
+                    | _ -> failwithf "'%s' did not match %A" s expected
+                | _ -> failwithf "'%s' did not match %A" s expected
+
+            opTest "1+2" (addOp 1 Plus 2)
+            opTest "1-2" (addOp 1 Minus 2)
+            opTest " 23 + 78 " (addOp 23 Plus 78)
+            opTest "987   -    321" (addOp 987 Minus 321)
 
     ]

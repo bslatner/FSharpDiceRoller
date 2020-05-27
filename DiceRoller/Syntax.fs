@@ -26,7 +26,7 @@ type Factor =
 
 type Term =
     | Factor of Factor
-    | MulOp of LTerm:Term * Operator:Operator * RTerm:Term
+    | MulOp of LFactor:Factor * Operator:Operator * RFactor:Factor
 
 let private integerRegex = Regex(@"\d+")
 
@@ -68,7 +68,7 @@ let (|Dice|_|) s =
         | _ -> None
     | _ -> None
 
-let (|AddOp|_|) s =
+let (|AddExp|_|) s =
     let s = triml s
     if s.Length > 0 then
         let c = s.[0]
@@ -80,7 +80,7 @@ let (|AddOp|_|) s =
     else
         None
 
-let (|MulOp|_|) s =
+let (|MulExp|_|) s =
     let s = triml s
     if s.Length > 0 then
         let c = s.[0]
@@ -91,8 +91,25 @@ let (|MulOp|_|) s =
     else
         None
 
-let (|Factor|_|) s =
+let (|SimpleFactor|_|) s =
     match s with
     | Dice (diceRoll,rest) -> Some (DiceRoll diceRoll,rest)
     | Int (i,rest) -> Some (Value i,rest)
     | _ -> None
+
+let rec (|Factor|_|) s =
+    match s with
+    | SimpleFactor (lfactor, AddExp(op, SimpleFactor(rfactor, rest))) -> Some (AddOp (lfactor, op, rfactor), rest)
+    | SimpleFactor (factor,rest) -> Some (factor,rest)
+    | _ -> None
+
+and (|Term|_|) s =
+    match s with
+    | Factor (lfactor, MulExp (op, Factor(rfactor, rest))) -> Some (MulOp (lfactor, op, rfactor), rest)
+    | Factor (factor, rest) -> Some (Factor factor, rest)
+    | _ -> None
+
+let (|Expression|_|) s =
+    match s with
+    | Term (term,_) -> Some term
+    | _ -> failwith "Parser error"
