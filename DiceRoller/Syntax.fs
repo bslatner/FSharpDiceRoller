@@ -34,14 +34,14 @@ let private triml (s : string) = s.TrimStart()
 
 let private after (s : string) i = s.Substring(i)
 
-let (|Int|_|) (s : string) =
+let (|Int|_|) s =
     let s = triml s
     let m = integerRegex.Match(s)
     match m.Success with
     | true -> Some(int m.Value, after s m.Value.Length)
     | false -> None
 
-let (|D|_|) (s : string) =
+let (|D|_|) s =
     let s = triml s
     if s.Length > 0 then
         match s.[0] with
@@ -50,7 +50,7 @@ let (|D|_|) (s : string) =
     else
         None
 
-let (|DExpr|_|) (s : string) =
+let (|DExpr|_|) s =
     match s with
     | D (_,rest) ->
         // single die
@@ -59,7 +59,7 @@ let (|DExpr|_|) (s : string) =
         | _ -> None
     | _ -> None
 
-let (|Dice|_|) (s : string) =
+let (|Dice|_|) s =
     match s with
     | DExpr result -> Some result
     | Int (quantity,rest) ->
@@ -68,7 +68,7 @@ let (|Dice|_|) (s : string) =
         | _ -> None
     | _ -> None
 
-let (|AddOp|_|) (s : string) =
+let (|AddOp|_|) s =
     let s = triml s
     if s.Length > 0 then
         let c = s.[0]
@@ -80,7 +80,7 @@ let (|AddOp|_|) (s : string) =
     else
         None
 
-let (|MulOp|_|) (s : string) =
+let (|MulOp|_|) s =
     let s = triml s
     if s.Length > 0 then
         let c = s.[0]
@@ -91,7 +91,7 @@ let (|MulOp|_|) (s : string) =
     else
         None
 
-let (|Factor|_|) (s : string) =
+let (|Factor|_|) s =
     match s with
     | Dice (diceRoll,rest) -> Some (DiceRoll diceRoll,rest)
     | Int (i,rest) -> Some (Value i,rest)
