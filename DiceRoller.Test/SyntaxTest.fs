@@ -144,5 +144,36 @@ let tests =
                 | Dice (value, _) -> Expect.equal value expected ""
                 | _ -> failwithf "%s did not parse to %A" s expected
 
+        testCase "Op matches operators" <| fun _ ->
+            let opTest s expected =
+                match s with
+                | Op (value, _) -> Expect.equal value expected ""
+                | _ -> failwithf "'%s' did not parse to %A" s expected
+
+            opTest "+" Plus
+            opTest "-" Minus
+            opTest "*" Multiply
+
+        testCase "Op matches operators with leading whitespace" <| fun _ ->
+            let opTest s expected =
+                match s with
+                | Op (value, _) -> Expect.equal value expected ""
+                | _ -> failwithf "'%s' did not parse to %A" s expected
+
+            opTest " +" Plus
+            opTest "  -" Minus
+            opTest "   *" Multiply
+
+        testCase "Op returns rest of string for operator" <| fun _ ->
+            let opTest s expected rest =
+                match s with
+                | Op (value, r) -> 
+                    Expect.equal value expected ""
+                    Expect.equal r rest ""
+                | _ -> failwithf "'%s' did not parse to %A" s expected
+
+            opTest " +abc" Plus "abc"
+            opTest "  - hello,world" Minus " hello,world"
+            opTest "   *     woot!" Multiply "     woot!"
 
     ]

@@ -63,3 +63,16 @@ let (|Dice|_|) (s : string) =
         | DExpr (result,rest) -> Some ({result with Quantity = quantity }, rest)
         | _ -> None
     | _ -> None
+
+let (|Op|_|) (s : string) =
+    let s = triml s
+    if s.Length > 0 then
+        let c = s.[0]
+        let r = after s 1
+        match c with
+        | '+' -> Some (Plus,r)
+        | '-' -> Some (Minus,r)
+        | '*' -> Some (Multiply,r)
+        | _ -> None
+    else
+        None
