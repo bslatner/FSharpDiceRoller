@@ -338,4 +338,54 @@ let tests =
             opTest " 23 * 78 " (mulOp 23 Multiply 78)
             opTest "987   *    321" (mulOp 987 Multiply 321)
 
+        testCase "Term matches dice + literal" <| fun _ ->
+            let testTerm s quantity sides operator literal =
+                match s with
+                | Term (t,_) ->
+                    match t with
+                    | Term.Factor factor ->
+                        match factor with
+                        | AddOp (l,op,r) ->
+                            match l with
+                            | DiceRoll diceRoll -> Expect.equal diceRoll { Quantity = quantity; Sides = sides } ""
+                            | _ -> failwithf "Expected DiceRoll but got %A" l 
+                            if op <> operator then
+                                failwithf "Expected Plus but got %A" op 
+                            match r with
+                            | Value v -> Expect.equal v literal ""
+                            | _ -> failwithf "Expected %i but got %A" literal r 
+                        | _ -> failwith "Failed to parse"
+                    | _ -> failwith "Failed to parse"
+                | _ -> failwith "Failed to parse"
+
+            testTerm "d6+4" 1 6 Plus 4
+            testTerm "1d6+4" 1 6 Plus 4
+            testTerm "2d20+10" 2 20 Plus 10
+            testTerm "3 d 100 - 7" 3 100 Minus 7
+
+        testCase "Term matches literal + dice " <| fun _ ->
+            let testTerm s literal operator quantity sides =
+                match s with
+                | Term (t,_) ->
+                    match t with
+                    | Term.Factor factor ->
+                        match factor with
+                        | AddOp (l,op,r) ->
+                            match l with
+                            | Value v -> Expect.equal v literal ""
+                            | _ -> failwithf "Expected %i but got %A" literal l
+                            if op <> operator then
+                                failwithf "Expected Plus but got %A" op 
+                            match r with
+                            | DiceRoll diceRoll -> Expect.equal diceRoll { Quantity = quantity; Sides = sides } ""
+                            | _ -> failwithf "Expected DiceRoll but got %A" r 
+                        | _ -> failwith "Failed to parse"
+                    | _ -> failwith "Failed to parse"
+                | _ -> failwith "Failed to parse"
+
+            testTerm "4+d6" 4 Plus 1 6
+            testTerm "4+1d6" 4 Plus 1 6
+            testTerm "10+2d20" 10 Plus 2 20
+            testTerm "7 - 3 d 100" 7 Minus 3 100
+
     ]
