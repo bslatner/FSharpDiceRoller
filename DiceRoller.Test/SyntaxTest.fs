@@ -95,6 +95,7 @@ let tests =
                 | DExpr (value,r) ->
                     Expect.equal value expected ""
                     Expect.equal r rest ""
+                | _ -> failwithf "Failed to parse input '%s'" s
 
         testCase "Dice matches dice expression with no quantity" <| fun _ ->
             let values = [ 
