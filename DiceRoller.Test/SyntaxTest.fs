@@ -244,6 +244,50 @@ let tests =
             opTest " 23 + 78 " (addOp 23 Plus 78)
             opTest "987   -    321" (addOp 987 Minus 321)
 
+        testCase "Factor matches dice + literal" <| fun _ ->
+            let testFactor s quantity sides operator literal =
+                match s with
+                | Factor (factor,_) ->
+                    match factor with
+                    | AddOp (l,op,r) ->
+                        match l with
+                        | DiceRoll diceRoll -> Expect.equal diceRoll { Quantity = quantity; Sides = sides } ""
+                        | _ -> failwithf "Expected DiceRoll but got %A" l 
+                        if op <> operator then
+                            failwithf "Expected Plus but got %A" op 
+                        match r with
+                        | Value v -> Expect.equal v literal ""
+                        | _ -> failwithf "Expected %i but got %A" literal r 
+                    | _ -> failwith "Failed to parse"
+                | _ -> failwith "Failed to parse"
+
+            testFactor "d6+4" 1 6 Plus 4
+            testFactor "1d6+4" 1 6 Plus 4
+            testFactor "2d20+10" 2 20 Plus 10
+            testFactor "3 d 100 - 7" 3 100 Minus 7
+
+        testCase "Factor matches literal + dice " <| fun _ ->
+            let testFactor s literal operator quantity sides =
+                match s with
+                | Factor (factor,_) ->
+                    match factor with
+                    | AddOp (l,op,r) ->
+                        match l with
+                        | Value v -> Expect.equal v literal ""
+                        | _ -> failwithf "Expected %i but got %A" literal l
+                        if op <> operator then
+                            failwithf "Expected Plus but got %A" op 
+                        match r with
+                        | DiceRoll diceRoll -> Expect.equal diceRoll { Quantity = quantity; Sides = sides } ""
+                        | _ -> failwithf "Expected DiceRoll but got %A" r 
+                    | _ -> failwith "Failed to parse"
+                | _ -> failwith "Failed to parse"
+
+            testFactor "4+d6" 4 Plus 1 6
+            testFactor "4+1d6" 4 Plus 1 6
+            testFactor "10+2d20" 10 Plus 2 20
+            testFactor "7 - 3 d 100" 7 Minus 3 100
+
         testCase "Term matches dice rolls" <| fun _ ->
             let opTest s expected =
                 match s with
