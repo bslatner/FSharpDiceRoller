@@ -23,8 +23,9 @@ type Factor =
     | DiceRoll of DiceRoll
     | Value of int
     | AddOp of LFactor:Factor * Operator:Operator * RFactor:Factor
+    | Expression of Term
 
-type Term =
+and Term =
     | Factor of Factor
     | MulOp of LFactor:Factor * Operator:Operator * RFactor:Factor
 
@@ -91,6 +92,28 @@ let (|MulExp|_|) s =
     else
         None
 
+let (|LParen|_|) s =
+    let s = triml s
+    if s.Length > 0 then
+        let c = s.[0]
+        let rest = after s 1
+        match c with
+        | '(' -> Some rest
+        | _ -> None
+    else
+        None
+
+let (|RParen|_|) s =
+    let s = triml s
+    if s.Length > 0 then
+        let c = s.[0]
+        let rest = after s 1
+        match c with
+        | ')' -> Some rest
+        | _ -> None
+    else
+        None
+
 let (|SimpleFactor|_|) s =
     match s with
     | Dice (diceRoll,rest) -> Some (DiceRoll diceRoll,rest)
@@ -99,6 +122,7 @@ let (|SimpleFactor|_|) s =
 
 let rec (|Factor|_|) s =
     match s with
+    | LParen (Term (t, RParen rest)) -> Some (Expression t, rest)
     | SimpleFactor (lfactor, AddExp(op, SimpleFactor(rfactor, rest))) -> Some (AddOp (lfactor, op, rfactor), rest)
     | SimpleFactor (factor,rest) -> Some (factor,rest)
     | _ -> None
@@ -109,7 +133,7 @@ and (|Term|_|) s =
     | Factor (factor, rest) -> Some (Factor factor, rest)
     | _ -> None
 
-let (|Expression|_|) s =
+let (|DiceExpression|_|) s =
     match s with
     | Term (term,_) -> Some term
     | _ -> failwith "Parser error"

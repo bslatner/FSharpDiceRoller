@@ -244,6 +244,28 @@ let tests =
             opTest " 23 + 78 " (addOp 23 Plus 78)
             opTest "987   -    321" (addOp 987 Minus 321)
 
+        testCase "Factor matches parentheses" <| fun _ ->
+            let addOp l op r = AddOp (Value l,op,Value r)
+
+            let opTest s expected =
+                match s with
+                | Factor (f,_) ->
+                    match f with
+                    | Factor.Expression e ->
+                        match e with
+                        | Term.Factor f ->
+                            match f with
+                            | AddOp (l,op,r) -> Expect.equal (AddOp (l,op,r)) expected ""
+                            | _ -> failwithf "'%s' did not match %A" s expected
+                        | _ -> failwithf "'%s' did not match %A" s expected
+                    | _ -> failwithf "'%s' did not match %A" s expected
+                | _ -> failwithf "'%s' did not match %A" s expected
+    
+            opTest "(1+2)" (addOp 1 Plus 2)
+            opTest "(1-2)" (addOp 1 Minus 2)
+            opTest "( 23 + 78 ) " (addOp 23 Plus 78)
+            opTest "(987   -    321  )  " (addOp 987 Minus 321)
+
         testCase "Factor matches dice + literal" <| fun _ ->
             let testFactor s quantity sides operator literal =
                 match s with
