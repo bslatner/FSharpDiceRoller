@@ -34,5 +34,32 @@ let (|Int|_|) (s : string) =
     let s = triml s
     let m = integerRegex.Match(s)
     match m.Success with
-    | true -> Some(int m.Value, (after s m.Value.Length))
+    | true -> Some(int m.Value, after s m.Value.Length)
     | false -> None
+
+let (|D|_|) (s : string) =
+    let s = triml s
+    if s.Length > 0 then
+        match s.[0] with
+        | 'D' | 'd' -> Some (s.[0], after s 1)
+        | _ -> None
+    else
+        None
+
+let (|DExpr|_|) (s : string) =
+    match s with
+    | D (_,rest) ->
+        // single die
+        match rest with
+        | Int (sides,rest) -> Some ({ Quantity = 1; Sides = sides }, rest)
+        | _ -> None
+    | _ -> None
+
+let (|Dice|_|) (s : string) =
+    match s with
+    | DExpr result -> Some result
+    | Int (quantity,rest) ->
+        match rest with
+        | DExpr (result,rest) -> Some ({result with Quantity = quantity }, rest)
+        | _ -> None
+    | _ -> None
