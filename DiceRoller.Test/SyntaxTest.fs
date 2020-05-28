@@ -3,6 +3,16 @@
 open Expecto
 open Syntax
 
+let unwindTermToFactor t =
+    match t with
+    | Term.Factor f -> f
+    | _ -> failwithf "Could not unwind Term %A to a factor" t
+
+let unwindExpressionToFactor e =
+    match e with
+    | Expression.Term t -> unwindTermToFactor t
+    | _ -> failwithf "Could not unwind expression %A to a factor" e
+
 [<Tests>]
 let tests = 
     testList "Parser tests" [
@@ -100,270 +110,158 @@ let tests =
                 | DiceE (value, _) -> Expect.equal value expected ""
                 | _ -> failwithf "%s did not parse to %A" s expected
 
-//        testCase "AddExp matches operators" <| fun _ ->
-//            let opTest s expected =
-//                match s with
-//                | AddExp (value, _) -> Expect.equal value expected ""
-//                | _ -> failwithf "'%s' did not parse to %A" s expected
+        testCase "FactorE matches dice rolls" <| fun _ ->
+            let opTest s expected =
+                match s with
+                | FactorE (f,_) -> 
+                    match f with
+                    | DiceRoll diceRoll -> Expect.equal diceRoll expected ""
+                    | _ -> failwithf "'%s' did not match %A" s expected
+                | _ -> failwithf "'%s' did not match %A" s expected
 
-//            opTest "+" Plus
-//            opTest "-" Minus
+            opTest "d4" { Quantity = 1; Sides = 4 }
+            opTest " d 4 " { Quantity = 1; Sides = 4 }
+            opTest "2d6" { Quantity = 2; Sides = 6 }
+            opTest "2 d6" { Quantity = 2; Sides = 6 }
 
-//        testCase "AddExp matches operators with leading whitespace" <| fun _ ->
-//            let opTest s expected =
-//                match s with
-//                | AddExp (value, _) -> Expect.equal value expected ""
-//                | _ -> failwithf "'%s' did not parse to %A" s expected
+        testCase "FactorE matches integer literals" <| fun _ ->
+            let opTest s expected =
+                match s with
+                | FactorE (f,_) -> 
+                    match f with
+                    | Value v -> Expect.equal v expected ""
+                    | _ -> failwithf "'%s' did not match Value %i" s expected
+                | _ -> failwithf "'%s' did not match Value %i" s expected
 
-//            opTest " +" Plus
-//            opTest "  -" Minus
+            opTest "1" 1
+            opTest " 1" 1
+            opTest "23" 23
+            opTest "23  " 23
 
-//        testCase "AddExp returns rest of string for operator" <| fun _ ->
-//            let opTest s expected rest =
-//                match s with
-//                | AddExp (value, r) -> 
-//                    Expect.equal value expected ""
-//                    Expect.equal r rest ""
-//                | _ -> failwithf "'%s' did not parse to %A" s expected
+        testCase "ExpressionE matches add and subtract expressions" <| fun _ ->
+            let value v = Term.Factor (Factor.Value v)
+            let addOp l op r = AddOp ((value l),op,(value r))
 
-//            opTest " +abc" Plus "abc"
-//            opTest "  - hello,world" Minus " hello,world"
+            let opTest s expected =
+                match s with
+                | ExpressionE (f,_) -> 
+                    match f with
+                    | AddOp (l,op,r) -> Expect.equal (AddOp (l,op,r)) expected ""
+                    | _ -> failwithf "'%s' did not match %A" s expected
+                | _ -> failwithf "'%s' did not match %A" s expected
 
-//        testCase "MulExp matches operators" <| fun _ ->
-//            let opTest s expected =
-//                match s with
-//                | MulExp (value, _) -> Expect.equal value expected ""
-//                | _ -> failwithf "'%s' did not parse to %A" s expected
+            opTest "1+2" (addOp 1 Plus 2)
+            opTest "1-2" (addOp 1 Minus 2)
+            opTest " 23 + 78 " (addOp 23 Plus 78)
+            opTest "987   -    321" (addOp 987 Minus 321)
 
-//            opTest "*" Multiply
+        testCase "ExpressionE matches consecutive add and subtract expressions" <| fun _ ->
+            let value v = Term.Factor (Factor.Value v)
 
-//        testCase "MulExp matches operators with leading whitespace" <| fun _ ->
-//            let opTest s expected =
-//                match s with
-//                | MulExp (value, _) -> Expect.equal value expected ""
-//                | _ -> failwithf "'%s' did not parse to %A" s expected
+            match "1+2-3" with
+            | ExpressionE (f,_) -> 
+                match f with
+                | AddOp (l,op,r) -> 
+                    Expect.equal l (value 1) ""
+                    Expect.equal op Plus ""
+                    Expect.equal r (Term.Factor (Factor.Expression(AddOp (value 2,Minus,value 3)))) ""
+                | _ -> failwith "'1+2-3 did not parse correctly"
+            | _ -> failwith "'1+2-3 did not parse correctly"
 
-//            opTest "   *" Multiply
+        testCase "ExpressionE matches dice + literal" <| fun _ ->
+            let testExpression s quantity sides operator literal =
+                match s with
+                | ExpressionE (e,_) ->
+                    match e with
+                    | AddOp (l,op,r) ->
+                        let l' = unwindTermToFactor l
+                        let r' = unwindTermToFactor r
+                        match l' with
+                        | DiceRoll diceRoll -> Expect.equal diceRoll { Quantity = quantity; Sides = sides } ""
+                        | _ -> failwithf "Expected DiceRoll but got %A" l 
+                        if op <> operator then
+                            failwithf "Expected Plus but got %A" op 
+                        match r' with
+                        | Value v -> Expect.equal v literal ""
+                        | _ -> failwithf "Expected %i but got %A" literal r 
+                    | _ -> failwith "Failed to parse"
+                | _ -> failwith "Failed to parse"
 
-//        testCase "MulExp returns rest of string for operator" <| fun _ ->
-//            let opTest s expected rest =
-//                match s with
-//                | MulExp (value, r) -> 
-//                    Expect.equal value expected ""
-//                    Expect.equal r rest ""
-//                | _ -> failwithf "'%s' did not parse to %A" s expected
+            testExpression "d6+4" 1 6 Plus 4
+            testExpression "1d6+4" 1 6 Plus 4
+            testExpression "2d20+10" 2 20 Plus 10
+            testExpression "3 d 100 - 7" 3 100 Minus 7
 
-//            opTest "   *     woot!" Multiply "     woot!"
+        testCase "ExpressioNE matches literal + dice " <| fun _ ->
+            let testExpression s literal operator quantity sides =
+                match s with
+                | ExpressionE (e,_) ->
+                    match e with
+                    | AddOp (l,op,r) ->
+                        let l' = unwindTermToFactor l
+                        let r' = unwindTermToFactor r
+                        match l' with
+                        | Value v -> Expect.equal v literal ""
+                        | _ -> failwithf "Expected %i but got %A" literal l
+                        if op <> operator then
+                            failwithf "Expected Plus but got %A" op 
+                        match r' with
+                        | DiceRoll diceRoll -> Expect.equal diceRoll { Quantity = quantity; Sides = sides } ""
+                        | _ -> failwithf "Expected DiceRoll but got %A" r 
+                    | _ -> failwith "Failed to parse"
+                | _ -> failwith "Failed to parse"
 
-//        testCase "Factor matches dice rolls" <| fun _ ->
-//            let opTest s expected =
-//                match s with
-//                | Factor (f,_) -> 
-//                    match f with
-//                    | DiceRoll diceRoll -> Expect.equal diceRoll expected ""
-//                    | _ -> failwithf "'%s' did not match %A" s expected
-//                | _ -> failwithf "'%s' did not match %A" s expected
+            testExpression "4+d6" 4 Plus 1 6
+            testExpression "4+1d6" 4 Plus 1 6
+            testExpression "10+2d20" 10 Plus 2 20
+            testExpression "7 - 3 d 100" 7 Minus 3 100
 
-//            opTest "d4" { Quantity = 1; Sides = 4 }
-//            opTest " d 4 " { Quantity = 1; Sides = 4 }
-//            opTest "2d6" { Quantity = 2; Sides = 6 }
-//            opTest "2 d6" { Quantity = 2; Sides = 6 }
+        testCase "FactorE matches parentheses" <| fun _ ->
+            let value v = Term.Factor (Factor.Value v)
+            let addOp l op r = AddOp ((value l),op,(value r))
 
-//        testCase "Factor matches integer literals" <| fun _ ->
-//            let opTest s expected =
-//                match s with
-//                | Factor (f,_) -> 
-//                    match f with
-//                    | Value v -> Expect.equal v expected ""
-//                    | _ -> failwithf "'%s' did not match Value %i" s expected
-//                | _ -> failwithf "'%s' did not match Value %i" s expected
-
-//            opTest "1" 1
-//            opTest " 1" 1
-//            opTest "23" 23
-//            opTest "23  " 23
-
-//        testCase "Factor matches add and subtract expressions" <| fun _ ->
-//            let addOp l op r = AddOp (Value l,op,Value r)
-
-//            let opTest s expected =
-//                match s with
-//                | Factor (f,_) -> 
-//                    match f with
-//                    | AddOp (l,op,r) -> Expect.equal (AddOp (l,op,r)) expected ""
-//                    | _ -> failwithf "'%s' did not match %A" s expected
-//                | _ -> failwithf "'%s' did not match %A" s expected
-
-//            opTest "1+2" (addOp 1 Plus 2)
-//            opTest "1-2" (addOp 1 Minus 2)
-//            opTest " 23 + 78 " (addOp 23 Plus 78)
-//            opTest "987   -    321" (addOp 987 Minus 321)
-
-//        testCase "Factor matches parentheses" <| fun _ ->
-//            let addOp l op r = AddOp (Value l,op,Value r)
-
-//            let opTest s expected =
-//                match s with
-//                | Factor (f,_) ->
-//                    match f with
-//                    | Factor.Expression e ->
-//                        match e with
-//                        | Term.Factor f ->
-//                            match f with
-//                            | AddOp (l,op,r) -> Expect.equal (AddOp (l,op,r)) expected ""
-//                            | _ -> failwithf "'%s' did not match %A" s expected
-//                        | _ -> failwithf "'%s' did not match %A" s expected
-//                    | _ -> failwithf "'%s' did not match %A" s expected
-//                | _ -> failwithf "'%s' did not match %A" s expected
+            let opTest s expected =
+                match s with
+                | FactorE (f,_) ->
+                    match f with
+                    | Factor.Expression e ->
+                        match e with
+                        | AddOp (l,op,r) -> Expect.equal (AddOp (l,op,r)) expected ""
+                        | _ -> failwithf "'%s' did not match %A" s expected
+                    | _ -> failwithf "'%s' did not match %A" s expected
+                | _ -> failwithf "'%s' did not match %A" s expected
     
-//            opTest "(1+2)" (addOp 1 Plus 2)
-//            opTest "(1-2)" (addOp 1 Minus 2)
-//            opTest "( 23 + 78 ) " (addOp 23 Plus 78)
-//            opTest "(987   -    321  )  " (addOp 987 Minus 321)
+            opTest "(1+2)" (addOp 1 Plus 2)
+            opTest "(1-2)" (addOp 1 Minus 2)
+            opTest "( 23 + 78 ) " (addOp 23 Plus 78)
+            opTest "(987   -    321  )  " (addOp 987 Minus 321)
 
-//        testCase "Factor matches dice + literal" <| fun _ ->
-//            let testFactor s quantity sides operator literal =
-//                match s with
-//                | Factor (factor,_) ->
-//                    match factor with
-//                    | AddOp (l,op,r) ->
-//                        match l with
-//                        | DiceRoll diceRoll -> Expect.equal diceRoll { Quantity = quantity; Sides = sides } ""
-//                        | _ -> failwithf "Expected DiceRoll but got %A" l 
-//                        if op <> operator then
-//                            failwithf "Expected Plus but got %A" op 
-//                        match r with
-//                        | Value v -> Expect.equal v literal ""
-//                        | _ -> failwithf "Expected %i but got %A" literal r 
-//                    | _ -> failwith "Failed to parse"
-//                | _ -> failwith "Failed to parse"
+        testCase "TermE matches multiplication expressions" <| fun _ ->
+            let mulOp l op r = MulOp (Value l,op,Value r)
 
-//            testFactor "d6+4" 1 6 Plus 4
-//            testFactor "1d6+4" 1 6 Plus 4
-//            testFactor "2d20+10" 2 20 Plus 10
-//            testFactor "3 d 100 - 7" 3 100 Minus 7
+            let opTest s expected =
+                match s with
+                | TermE (t,_) ->
+                    match t with
+                    | MulOp (l,op,r) -> Expect.equal (MulOp (l,op,r)) expected ""
+                    | _ -> failwithf "'%s' did not match %A" s expected
+                | _ -> failwithf "'%s' did not match %A" s expected
 
-//        testCase "Factor matches literal + dice " <| fun _ ->
-//            let testFactor s literal operator quantity sides =
-//                match s with
-//                | Factor (factor,_) ->
-//                    match factor with
-//                    | AddOp (l,op,r) ->
-//                        match l with
-//                        | Value v -> Expect.equal v literal ""
-//                        | _ -> failwithf "Expected %i but got %A" literal l
-//                        if op <> operator then
-//                            failwithf "Expected Plus but got %A" op 
-//                        match r with
-//                        | DiceRoll diceRoll -> Expect.equal diceRoll { Quantity = quantity; Sides = sides } ""
-//                        | _ -> failwithf "Expected DiceRoll but got %A" r 
-//                    | _ -> failwith "Failed to parse"
-//                | _ -> failwith "Failed to parse"
+            opTest "1*2" (mulOp 1 Multiply 2)
+            opTest " 23 * 78 " (mulOp 23 Multiply 78)
+            opTest "987   *    321" (mulOp 987 Multiply 321)
 
-//            testFactor "4+d6" 4 Plus 1 6
-//            testFactor "4+1d6" 4 Plus 1 6
-//            testFactor "10+2d20" 10 Plus 2 20
-//            testFactor "7 - 3 d 100" 7 Minus 3 100
+        testCase "TermE matches consecutive multiplication expressions" <| fun _ ->
 
-//        testCase "Term matches dice rolls" <| fun _ ->
-//            let opTest s expected =
-//                match s with
-//                | Term (t,_) -> 
-//                    match t with
-//                    | Term.Factor f ->
-//                        match f with
-//                        | DiceRoll diceRoll -> Expect.equal diceRoll expected ""
-//                        | _ -> failwithf "'%s' did not match %A" s expected
-//                    | _ -> failwithf "'%s' did not match %A" s expected
-//                | _ -> failwithf "'%s' did not match %A" s expected
-
-
-//            opTest "d4" { Quantity = 1; Sides = 4 }
-//            opTest " d 4 " { Quantity = 1; Sides = 4 }
-//            opTest "2d6" { Quantity = 2; Sides = 6 }
-//            opTest "2 d6" { Quantity = 2; Sides = 6 }
-
-//        testCase "Term matches integer literals" <| fun _ ->
-//            let opTest s expected =
-//                match s with
-//                | Term (t,_) ->
-//                    match t with
-//                    | Term.Factor f -> 
-//                        match f with
-//                        | Value v -> Expect.equal v expected ""
-//                        | _ -> failwithf "'%s' did not match Value %i" s expected
-//                    | _ -> failwithf "'%s' did not match Value %i" s expected
-//                | _ -> failwithf "'%s' did not match Value %i" s expected
-
-//            opTest "1" 1
-//            opTest " 1" 1
-//            opTest "23" 23
-//            opTest "23  " 23
-
-//        testCase "Term matches multiplication expressions" <| fun _ ->
-//            let mulOp l op r = MulOp (Value l,op,Value r)
-
-//            let opTest s expected =
-//                match s with
-//                | Term (t,_) ->
-//                    match t with
-//                    | Term.MulOp (l,op,r) -> Expect.equal (MulOp (l,op,r)) expected ""
-//                    | _ -> failwithf "'%s' did not match %A" s expected
-//                | _ -> failwithf "'%s' did not match %A" s expected
-
-//            opTest "1*2" (mulOp 1 Multiply 2)
-//            opTest " 23 * 78 " (mulOp 23 Multiply 78)
-//            opTest "987   *    321" (mulOp 987 Multiply 321)
-
-//        testCase "Term matches dice + literal" <| fun _ ->
-//            let testTerm s quantity sides operator literal =
-//                match s with
-//                | Term (t,_) ->
-//                    match t with
-//                    | Term.Factor factor ->
-//                        match factor with
-//                        | AddOp (l,op,r) ->
-//                            match l with
-//                            | DiceRoll diceRoll -> Expect.equal diceRoll { Quantity = quantity; Sides = sides } ""
-//                            | _ -> failwithf "Expected DiceRoll but got %A" l 
-//                            if op <> operator then
-//                                failwithf "Expected Plus but got %A" op 
-//                            match r with
-//                            | Value v -> Expect.equal v literal ""
-//                            | _ -> failwithf "Expected %i but got %A" literal r 
-//                        | _ -> failwith "Failed to parse"
-//                    | _ -> failwith "Failed to parse"
-//                | _ -> failwith "Failed to parse"
-
-//            testTerm "d6+4" 1 6 Plus 4
-//            testTerm "1d6+4" 1 6 Plus 4
-//            testTerm "2d20+10" 2 20 Plus 10
-//            testTerm "3 d 100 - 7" 3 100 Minus 7
-
-//        testCase "Term matches literal + dice " <| fun _ ->
-//            let testTerm s literal operator quantity sides =
-//                match s with
-//                | Term (t,_) ->
-//                    match t with
-//                    | Term.Factor factor ->
-//                        match factor with
-//                        | AddOp (l,op,r) ->
-//                            match l with
-//                            | Value v -> Expect.equal v literal ""
-//                            | _ -> failwithf "Expected %i but got %A" literal l
-//                            if op <> operator then
-//                                failwithf "Expected Plus but got %A" op 
-//                            match r with
-//                            | DiceRoll diceRoll -> Expect.equal diceRoll { Quantity = quantity; Sides = sides } ""
-//                            | _ -> failwithf "Expected DiceRoll but got %A" r 
-//                        | _ -> failwith "Failed to parse"
-//                    | _ -> failwith "Failed to parse"
-//                | _ -> failwith "Failed to parse"
-
-//            testTerm "4+d6" 4 Plus 1 6
-//            testTerm "4+1d6" 4 Plus 1 6
-//            testTerm "10+2d20" 10 Plus 2 20
-//            testTerm "7 - 3 d 100" 7 Minus 3 100
+            match "1*2*3" with
+            | TermE (t,_) ->
+                match t with
+                | MulOp (l,op,r) -> 
+                    Expect.equal l (Factor.Value 1) ""
+                    Expect.equal op Multiply ""
+                    Expect.equal r (Factor.Expression (Expression.Term (Term.MulOp (Value 2,Multiply,Value 3)))) ""
+                | _ -> failwith "'1*2*3 did not parse correctly"
+            | _ -> failwith "'1*2*3 did not parse correctly"
 
 //        //testCase "parseDiceExpression matches various expressions" <| fun _ ->
 

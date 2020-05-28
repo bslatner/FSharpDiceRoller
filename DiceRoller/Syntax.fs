@@ -143,7 +143,9 @@ and (|TermE|_|) s =
         | _ -> lfactor,s
 
     match s with
-    | FactorE (lfactor, MulE (op, FactorE(rfactor, rest))) -> Some (MulOp (lfactor, op, rfactor), rest)
+    | FactorE (lfactor, MulE (op, FactorE(rfactor, rest))) -> 
+        let rfactor',rest' = buildr rest rfactor
+        Some (MulOp (lfactor, op, rfactor'), rest')
     | FactorE (factor, rest) -> Some (Factor factor, rest)
     | _ -> None
 
