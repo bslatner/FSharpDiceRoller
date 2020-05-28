@@ -117,9 +117,19 @@ let private (|RParen|_|) s =
         None
 
 let rec (|ExpressionE|_|) s =
+
+    let rec buildr s lterm =
+        match s with
+        | AddE(op, TermE(rterm, rest)) ->
+            let rterm',rest' = buildr rest rterm
+            Term.Factor (Factor.Expression (AddOp (lterm,op,rterm'))),rest'
+        | _ -> lterm,s
+            
     let s = triml s
     match s with
-    | TermE (lterm, AddE(op, TermE(rterm, rest))) -> Some (AddOp (lterm, op, rterm), rest)
+    | TermE (lterm, AddE(op, TermE(rterm, rest))) -> 
+        let rterm',rest' = buildr rest rterm
+        Some (AddOp (lterm, op, rterm'), rest')
     | TermE (term,rest) -> Some (Term term,rest)
     | _ -> None
 
