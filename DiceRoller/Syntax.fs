@@ -47,7 +47,7 @@ let (|Int|_|) s =
     | true -> Some(int m.Value, after s m.Value.Length)
     | false -> None
 
-let (|D|_|) s =
+let private (|D|_|) s =
     let s = triml s
     if s.Length > 0 then
         match s.[0] with
@@ -56,7 +56,7 @@ let (|D|_|) s =
     else
         None
 
-let (|DExpr|_|) s =
+let private (|DE|_|) s =
     match s with
     | D (_,rest) ->
         // single die
@@ -65,16 +65,13 @@ let (|DExpr|_|) s =
         | _ -> None
     | _ -> None
 
-let (|Dice|_|) s =
+let (|DiceE|_|) s =
     match s with
-    | DExpr result -> Some result
-    | Int (quantity,rest) ->
-        match rest with
-        | DExpr (result,rest) -> Some ({result with Quantity = quantity }, rest)
-        | _ -> None
+    | DE result -> Some result
+    | Int (quantity,DE(result, rest)) -> Some ({result with Quantity = quantity }, rest)
     | _ -> None
 
-let (|AddExp|_|) s =
+let private (|AddE|_|) s =
     let s = triml s
     if s.Length > 0 then
         let c = s.[0]
@@ -86,7 +83,7 @@ let (|AddExp|_|) s =
     else
         None
 
-let (|MulExp|_|) s =
+let private (|MulE|_|) s =
     let s = triml s
     if s.Length > 0 then
         let c = s.[0]
@@ -97,7 +94,7 @@ let (|MulExp|_|) s =
     else
         None
 
-let (|LParen|_|) s =
+let private (|LParen|_|) s =
     let s = triml s
     if s.Length > 0 then
         let c = s.[0]
@@ -108,7 +105,7 @@ let (|LParen|_|) s =
     else
         None
 
-let (|RParen|_|) s =
+let private (|RParen|_|) s =
     let s = triml s
     if s.Length > 0 then
         let c = s.[0]
@@ -122,20 +119,20 @@ let (|RParen|_|) s =
 let rec (|ExpressionE|_|) s =
     let s = triml s
     match s with
-    | TermE (lterm, AddExp(op, TermE(rterm, rest))) -> Some (AddOp (lterm, op, rterm), rest)
+    | TermE (lterm, AddE(op, TermE(rterm, rest))) -> Some (AddOp (lterm, op, rterm), rest)
     | TermE (term,rest) -> Some (Term term,rest)
     | _ -> None
 
 and (|TermE|_|) s =
     match s with
-    | FactorE (lfactor, MulExp (op, FactorE(rfactor, rest))) -> Some (MulOp (lfactor, op, rfactor), rest)
+    | FactorE (lfactor, MulE (op, FactorE(rfactor, rest))) -> Some (MulOp (lfactor, op, rfactor), rest)
     | FactorE (factor, rest) -> Some (Factor factor, rest)
     | _ -> None
 
 and  (|FactorE|_|) s =
     match s with
     | LParen (ExpressionE (e, RParen rest)) -> Some (Expression e, rest)
-    | Dice (diceRoll,rest) -> Some (DiceRoll diceRoll,rest)
+    | DiceE (diceRoll,rest) -> Some (DiceRoll diceRoll,rest)
     | Int (i,rest) -> Some (Value i,rest)
     | _ -> None
 
