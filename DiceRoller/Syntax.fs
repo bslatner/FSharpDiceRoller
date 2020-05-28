@@ -121,8 +121,8 @@ let rec (|ExpressionE|_|) s =
     let rec buildr s lterm =
         match s with
         | AddE(op, TermE(rterm, rest)) ->
-            let rterm',rest' = buildr rest rterm
-            Term.Factor (Factor.Expression (AddOp (lterm,op,rterm'))),rest'
+            let newrterm,newrest = buildr rest rterm
+            Term.Factor (Factor.Expression (AddOp (lterm,op,newrterm))),newrest
         | _ -> lterm,s
             
     let s = triml s
@@ -134,6 +134,14 @@ let rec (|ExpressionE|_|) s =
     | _ -> None
 
 and (|TermE|_|) s =
+
+    let rec buildr s lfactor : Factor *string =
+        match s with
+        | MulE(op, FactorE(rfactor, rest)) ->
+            let newrfactor,newrest = buildr rest rfactor
+            Factor.Expression (Expression.Term (MulOp (lfactor,op,newrfactor))),newrest
+        | _ -> lfactor,s
+
     match s with
     | FactorE (lfactor, MulE (op, FactorE(rfactor, rest))) -> Some (MulOp (lfactor, op, rfactor), rest)
     | FactorE (factor, rest) -> Some (Factor factor, rest)
