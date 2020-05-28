@@ -19,17 +19,22 @@ type DiceRoll =
         Sides : int
     }
 
-type Factor =
-    | DiceRoll of DiceRoll
-    | Value of int
-    | AddOp of LFactor:Factor * Operator:Operator * RFactor:Factor
-    | Expression of Term
+type Expression =
+    | Term of Term
+    | AddOp of LTerm:Term * Operator:Operator * RTerm:Term
 
 and Term =
     | Factor of Factor
     | MulOp of LFactor:Factor * Operator:Operator * RFactor:Factor
 
+and Factor =
+    | DiceRoll of DiceRoll
+    | Value of int
+    | Expression of Expression
+
 let private integerRegex = Regex(@"\d+")
+
+let private trim (s : string) = s.Trim()
 
 let private triml (s : string) = s.TrimStart()
 
@@ -114,26 +119,28 @@ let (|RParen|_|) s =
     else
         None
 
-let (|SimpleFactor|_|) s =
+let rec (|ExpressionE|_|) s =
+    let s = triml s
     match s with
+    | TermE (lterm, AddExp(op, TermE(rterm, rest))) -> Some (AddOp (lterm, op, rterm), rest)
+    | TermE (term,rest) -> Some (Term term,rest)
+    | _ -> None
+
+and (|TermE|_|) s =
+    match s with
+    | FactorE (lfactor, MulExp (op, FactorE(rfactor, rest))) -> Some (MulOp (lfactor, op, rfactor), rest)
+    | FactorE (factor, rest) -> Some (Factor factor, rest)
+    | _ -> None
+
+and  (|FactorE|_|) s =
+    match s with
+    | LParen (ExpressionE (e, RParen rest)) -> Some (Expression e, rest)
     | Dice (diceRoll,rest) -> Some (DiceRoll diceRoll,rest)
     | Int (i,rest) -> Some (Value i,rest)
     | _ -> None
 
-let rec (|Factor|_|) s =
-    match s with
-    | LParen (Term (t, RParen rest)) -> Some (Expression t, rest)
-    | SimpleFactor (lfactor, AddExp(op, SimpleFactor(rfactor, rest))) -> Some (AddOp (lfactor, op, rfactor), rest)
-    | SimpleFactor (factor,rest) -> Some (factor,rest)
-    | _ -> None
 
-and (|Term|_|) s =
+let parseDiceExpression s =
     match s with
-    | Factor (lfactor, MulExp (op, Factor(rfactor, rest))) -> Some (MulOp (lfactor, op, rfactor), rest)
-    | Factor (factor, rest) -> Some (Factor factor, rest)
-    | _ -> None
-
-let (|DiceExpression|_|) s =
-    match s with
-    | Term (term,_) -> Some term
+    | ExpressionE expression -> expression
     | _ -> failwith "Parser error"
