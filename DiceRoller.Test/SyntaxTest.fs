@@ -263,9 +263,4 @@ let tests =
                 | _ -> failwith "'1*2*3 did not parse correctly"
             | _ -> failwith "'1*2*3 did not parse correctly"
 
-//        //testCase "parseDiceExpression matches various expressions" <| fun _ ->
-
-//        //    let testExpression s expected =
-//        //        let exp = parseDiceExpression s
-//        //        Expect.equal s exp ""
     ]
