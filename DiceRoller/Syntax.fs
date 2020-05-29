@@ -19,13 +19,13 @@ type DiceRoll =
         Sides : int
     }
 
-type Expression =
+and Expression =
     | Term of Term
-    | AddOp of LTerm:Term * Operator:Operator * RTerm:Term
+    | AddOp of Term * ((Operator * Term) list)
 
 and Term =
     | Factor of Factor
-    | MulOp of LFactor:Factor * Operator:Operator * RFactor:Factor
+    | MulOp of Factor * ((Operator * Factor) list)
 
 and Factor =
     | DiceRoll of DiceRoll
@@ -118,34 +118,33 @@ let private (|RParen|_|) s =
 
 let rec (|ExpressionE|_|) s =
 
-    let rec buildr s lterm =
+    let rec build s lterm =
         match s with
         | AddE(op, TermE(rterm, rest)) ->
-            let newrterm,newrest = buildr rest rterm
-            Term.Factor (Factor.Expression (AddOp (lterm,op,newrterm))),newrest
+            List.append lterm [op,rterm] |> build rest
         | _ -> lterm,s
-            
+
     let s = triml s
     match s with
     | TermE (lterm, AddE(op, TermE(rterm, rest))) -> 
-        let rterm',rest' = buildr rest rterm
-        Some (AddOp (lterm, op, rterm'), rest')
-    | TermE (term,rest) -> Some (Term term,rest)
+        let ops,newrest = build rest [op,rterm]
+        Some (AddOp (lterm,ops),newrest)
+    | TermE (term,rest) -> Some (Expression.Term term,rest)
     | _ -> None
 
 and (|TermE|_|) s =
 
-    let rec buildr s lfactor : Factor *string =
+    let rec build s lfactor =
         match s with
         | MulE(op, FactorE(rfactor, rest)) ->
-            let newrfactor,newrest = buildr rest rfactor
-            Factor.Expression (Expression.Term (MulOp (lfactor,op,newrfactor))),newrest
+            List.append lfactor [op,rfactor] |> build rest
         | _ -> lfactor,s
 
+    let s = triml s
     match s with
     | FactorE (lfactor, MulE (op, FactorE(rfactor, rest))) -> 
-        let rfactor',rest' = buildr rest rfactor
-        Some (MulOp (lfactor, op, rfactor'), rest')
+        let ops,newrest = build rest [op,rfactor]
+        Some (MulOp (lfactor,ops),newrest)
     | FactorE (factor, rest) -> Some (Factor factor, rest)
     | _ -> None
 

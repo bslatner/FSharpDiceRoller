@@ -139,14 +139,13 @@ let tests =
             opTest "23  " 23
 
         testCase "ExpressionE matches add and subtract expressions" <| fun _ ->
-            let value v = Term.Factor (Factor.Value v)
-            let addOp l op r = AddOp ((value l),op,(value r))
+            let addOp l op r = AddOp ((valuet l),[op,valuet r])
 
             let opTest s expected =
                 match s with
                 | ExpressionE (f,_) -> 
                     match f with
-                    | AddOp (l,op,r) -> Expect.equal (AddOp (l,op,r)) expected ""
+                    | AddOp (l,(others)) -> Expect.equal (AddOp (l,others)) expected ""
                     | _ -> failwithf "'%s' did not match %A" s expected
                 | _ -> failwithf "'%s' did not match %A" s expected
 
@@ -156,15 +155,12 @@ let tests =
             opTest "987   -    321" (addOp 987 Minus 321)
 
         testCase "ExpressionE matches consecutive add and subtract expressions" <| fun _ ->
-            let value v = Term.Factor (Factor.Value v)
-
             match "1+2-3" with
             | ExpressionE (f,_) -> 
                 match f with
-                | AddOp (l,op,r) -> 
-                    Expect.equal l (value 1) ""
-                    Expect.equal op Plus ""
-                    Expect.equal r (Term.Factor (Factor.Expression(AddOp (value 2,Minus,value 3)))) ""
+                | AddOp (l,others) -> 
+                    Expect.equal l (valuet 1) ""
+                    Expect.equal others [Plus,valuet 2;Minus,valuet 3] ""
                 | _ -> failwith "'1+2-3 did not parse correctly"
             | _ -> failwith "'1+2-3 did not parse correctly"
 
@@ -173,7 +169,7 @@ let tests =
                 match s with
                 | ExpressionE (e,_) ->
                     match e with
-                    | AddOp (l,op,r) ->
+                    | AddOp (l,([op,r])) ->
                         let l' = unwindTermToFactor l
                         let r' = unwindTermToFactor r
                         match l' with
@@ -183,7 +179,7 @@ let tests =
                             failwithf "Expected Plus but got %A" op 
                         match r' with
                         | Value v -> Expect.equal v literal ""
-                        | _ -> failwithf "Expected %i but got %A" literal r 
+                        | _ -> failwithf "Expected %i but got %A" literal r
                     | _ -> failwith "Failed to parse"
                 | _ -> failwith "Failed to parse"
 
@@ -192,12 +188,12 @@ let tests =
             testExpression "2d20+10" 2 20 Plus 10
             testExpression "3 d 100 - 7" 3 100 Minus 7
 
-        testCase "ExpressioNE matches literal + dice " <| fun _ ->
+        testCase "ExpressionE matches literal + dice " <| fun _ ->
             let testExpression s literal operator quantity sides =
                 match s with
                 | ExpressionE (e,_) ->
                     match e with
-                    | AddOp (l,op,r) ->
+                    | AddOp (l,[op,r]) ->
                         let l' = unwindTermToFactor l
                         let r' = unwindTermToFactor r
                         match l' with
@@ -217,49 +213,43 @@ let tests =
             testExpression "7 - 3 d 100" 7 Minus 3 100
 
         testCase "FactorE matches parentheses" <| fun _ ->
-            let value v = Term.Factor (Factor.Value v)
-            let addOp l op r = AddOp ((value l),op,(value r))
-
             let opTest s expected =
                 match s with
                 | FactorE (f,_) ->
                     match f with
                     | Factor.Expression e ->
                         match e with
-                        | AddOp (l,op,r) -> Expect.equal (AddOp (l,op,r)) expected ""
+                        | AddOp (l,others) -> Expect.equal (AddOp (l,others)) expected ""
                         | _ -> failwithf "'%s' did not match %A" s expected
                     | _ -> failwithf "'%s' did not match %A" s expected
                 | _ -> failwithf "'%s' did not match %A" s expected
     
-            opTest "(1+2)" (addOp 1 Plus 2)
-            opTest "(1-2)" (addOp 1 Minus 2)
-            opTest "( 23 + 78 ) " (addOp 23 Plus 78)
-            opTest "(987   -    321  )  " (addOp 987 Minus 321)
+            opTest "(1+2)" (adde 1 2)
+            opTest "(1-2)" (sube 1 2)
+            opTest "( 23 + 78 ) " (adde 23 78)
+            opTest "(987   -    321  )  " (sube 987 321)
 
         testCase "TermE matches multiplication expressions" <| fun _ ->
-            let mulOp l op r = MulOp (Value l,op,Value r)
-
             let opTest s expected =
                 match s with
                 | TermE (t,_) ->
                     match t with
-                    | MulOp (l,op,r) -> Expect.equal (MulOp (l,op,r)) expected ""
+                    | MulOp (l,[op,r]) -> Expect.equal (MulOp (l,[op,r])) expected ""
                     | _ -> failwithf "'%s' did not match %A" s expected
                 | _ -> failwithf "'%s' did not match %A" s expected
 
-            opTest "1*2" (mulOp 1 Multiply 2)
-            opTest " 23 * 78 " (mulOp 23 Multiply 78)
-            opTest "987   *    321" (mulOp 987 Multiply 321)
+            opTest "1*2" (mult 1 2)
+            opTest " 23 * 78 " (mult 23 78)
+            opTest "987   *    321" (mult 987 321)
 
         testCase "TermE matches consecutive multiplication expressions" <| fun _ ->
 
             match "1*2*3" with
             | TermE (t,_) ->
                 match t with
-                | MulOp (l,op,r) -> 
+                | MulOp (l,others) -> 
                     Expect.equal l (Factor.Value 1) ""
-                    Expect.equal op Multiply ""
-                    Expect.equal r (Factor.Expression (Expression.Term (Term.MulOp (Value 2,Multiply,Value 3)))) ""
+                    Expect.equal others [Multiply,valuef 2;Multiply,valuef 3] ""
                 | _ -> failwith "'1*2*3 did not parse correctly"
             | _ -> failwith "'1*2*3 did not parse correctly"
 

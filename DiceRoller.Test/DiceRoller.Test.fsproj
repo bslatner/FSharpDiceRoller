@@ -6,7 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Helpers.fs" />
+    <Compile Include="Expect.fs" />
     <Compile Include="SyntaxTest.fs" />
+    <Compile Include="EvalTest.fs" />
+    <Compile Include="IntegrationTest.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
