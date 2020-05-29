@@ -43,7 +43,7 @@ let eval e =
 
     and evalFactor f =
         match f with
-        | DiceRoll d -> roll d.Quantity d.Sides
+        | DiceRoll (quantity,sides) -> roll quantity sides
         | Value v -> v
         | Expression e -> evalExpression e
 

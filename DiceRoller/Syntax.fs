@@ -13,12 +13,6 @@ open System.Text.RegularExpressions
 
 type Operator = Plus | Minus | Multiply
 
-type DiceRoll =
-    {
-        Quantity : int
-        Sides : int
-    }
-
 and Expression =
     | Term of Term
     | AddOp of Term * ((Operator * Term) list)
@@ -28,7 +22,7 @@ and Term =
     | MulOp of Factor * ((Operator * Factor) list)
 
 and Factor =
-    | DiceRoll of DiceRoll
+    | DiceRoll of Quantity:int * Sides:int
     | Value of int
     | Expression of Expression
 
@@ -61,14 +55,14 @@ let private (|DE|_|) s =
     | D (_,rest) ->
         // single die
         match rest with
-        | Int (sides,rest) -> Some ({ Quantity = 1; Sides = sides }, rest)
+        | Int (sides,rest) -> Some ((1,sides), rest)
         | _ -> None
     | _ -> None
 
 let (|DiceE|_|) s =
     match s with
     | DE result -> Some result
-    | Int (quantity,DE(result, rest)) -> Some ({result with Quantity = quantity }, rest)
+    | Int (quantity,DE((_,sides), rest)) -> Some ((quantity,sides), rest)
     | _ -> None
 
 let private (|AddE|_|) s =

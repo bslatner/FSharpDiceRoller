@@ -64,9 +64,9 @@ let tests =
 
         testCase "DiceE matches dice expression with no quantity" <| fun _ ->
             let values = [ 
-                "d6",{ Quantity = 1; Sides = 6 }
-                "d12",{ Quantity = 1; Sides = 12 }
-                "d100",{ Quantity = 1; Sides = 100 }
+                "d6",(1,6)
+                "d12",(1,12)
+                "d100",(1,100)
             ]
             for v in values do
                 let s,expected = v
@@ -76,9 +76,9 @@ let tests =
 
         testCase "DiceE matches dice expression with no quantity and leading whitespace" <| fun _ ->
             let values = [ 
-                "  d6",{ Quantity = 1; Sides = 6 }
-                "   d12",{ Quantity = 1; Sides = 12 }
-                " d100",{ Quantity = 1; Sides = 100 }
+                "  d6",(1,6)
+                "   d12",(1,12)
+                " d100",(1,100)
             ]
             for v in values do
                 let s,expected = v
@@ -88,9 +88,9 @@ let tests =
 
         testCase "DiceE matches dice expression with quantity" <| fun _ ->
             let values = [ 
-                "1d6",{ Quantity = 1; Sides = 6 }
-                "2 d12",{ Quantity = 2; Sides = 12 }
-                "3   d100",{ Quantity = 3; Sides = 100 }
+                "1d6",(1,6)
+                "2 d12",(2,12)
+                "3   d100",(3,100)
             ]
             for v in values do
                 let s,expected = v
@@ -100,9 +100,9 @@ let tests =
 
         testCase "DiceE matches dice expression with quantity and leading whitespace" <| fun _ ->
             let values = [ 
-                "  1d6",{ Quantity = 1; Sides = 6 }
-                "   2 d12",{ Quantity = 2; Sides = 12 }
-                " 3  d100",{ Quantity = 3; Sides = 100 }
+                "  1d6",(1,6)
+                "   2 d12",(2,12)
+                " 3  d100",(3,100)
             ]
             for v in values do
                 let s,expected = v
@@ -115,14 +115,14 @@ let tests =
                 match s with
                 | FactorE (f,_) -> 
                     match f with
-                    | DiceRoll diceRoll -> Expect.equal diceRoll expected ""
+                    | DiceRoll (q,s) -> Expect.equal (q,s) expected ""
                     | _ -> failwithf "'%s' did not match %A" s expected
                 | _ -> failwithf "'%s' did not match %A" s expected
 
-            opTest "d4" { Quantity = 1; Sides = 4 }
-            opTest " d 4 " { Quantity = 1; Sides = 4 }
-            opTest "2d6" { Quantity = 2; Sides = 6 }
-            opTest "2 d6" { Quantity = 2; Sides = 6 }
+            opTest "d4" (1,4)
+            opTest " d 4 " (1,4)
+            opTest "2d6" (2,6)
+            opTest "2 d6" (2,6)
 
         testCase "FactorE matches integer literals" <| fun _ ->
             let opTest s expected =
@@ -173,7 +173,7 @@ let tests =
                         let l' = unwindTermToFactor l
                         let r' = unwindTermToFactor r
                         match l' with
-                        | DiceRoll diceRoll -> Expect.equal diceRoll { Quantity = quantity; Sides = sides } ""
+                        | DiceRoll (q,s) -> Expect.equal (q,s) (quantity,sides) ""
                         | _ -> failwithf "Expected DiceRoll but got %A" l 
                         if op <> operator then
                             failwithf "Expected Plus but got %A" op 
@@ -202,7 +202,7 @@ let tests =
                         if op <> operator then
                             failwithf "Expected Plus but got %A" op 
                         match r' with
-                        | DiceRoll diceRoll -> Expect.equal diceRoll { Quantity = quantity; Sides = sides } ""
+                        | DiceRoll (q,s) -> Expect.equal (q,s) (quantity,sides) ""
                         | _ -> failwithf "Expected DiceRoll but got %A" r 
                     | _ -> failwith "Failed to parse"
                 | _ -> failwith "Failed to parse"
